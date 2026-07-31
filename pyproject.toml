@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "verkit"
+version = "0.1.0"
+description = "Polyglot project version inspector, promoter, tagger, and release workflow engine"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Mark Stouffer" }
+]
+dependencies = [
+    "rich>=10.0.0",
+]
+
+[project.scripts]
+verkit = "verkit.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
