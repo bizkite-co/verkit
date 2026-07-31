@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "verkit"
-version = "0.1.3"
+version = "0.1.4"
 description = "Polyglot project version inspector, promoter, tagger, and release workflow engine"
 readme = "README.md"
 requires-python = ">=3.9"
