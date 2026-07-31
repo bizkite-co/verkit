@@ -89,46 +89,116 @@ def _stage_version_files(git_root: Path, project_root: Path) -> List[str]:
     return staged
 
 
+def _increment_semver(current_v: str, part: str) -> str:
+    """Increment a semver string (e.g. 0.1.0 -> 0.1.1) in pure Python."""
+    match = re.match(r"^(\d+)\.(\d+)\.(\d+)(.*)$", current_v.strip())
+    if not match:
+        raise ValueError(f"Version {current_v!r} is not a valid semver X.Y.Z string")
+
+    major, minor, patch, extra = (
+        int(match.group(1)),
+        int(match.group(2)),
+        int(match.group(3)),
+        match.group(4),
+    )
+    if part == "major":
+        major += 1
+        minor = 0
+        patch = 0
+    elif part == "minor":
+        minor += 1
+        patch = 0
+    elif part == "patch":
+        patch += 1
+    else:
+        raise ValueError(f"Unknown bump part: {part!r}")
+
+    return f"{major}.{minor}.{patch}{extra}"
+
+
 def _bump_project_version(part: str, project_root: Path, source: str) -> str:
+    info = get_project_version(project_root)
+    if info.version == "unknown":
+        raise RuntimeError("Cannot bump version: current project version is unknown.")
+
+    new_v = _increment_semver(info.version, part)
+
     if source == "pyproject.toml":
-        res = subprocess.run(
-            [
-                "bump-my-version",
-                "bump",
-                part,
-                "--config-file",
-                str(project_root / "pyproject.toml"),
-            ],
-            capture_output=True,
-            text=True,
-            cwd=project_root,
-            shell=(os.name == "nt"),
+        file_path = project_root / "pyproject.toml"
+        content = file_path.read_text(encoding="utf-8")
+        updated = re.sub(
+            r'(version\s*=\s*)"(.*?)"', f'\\1"{new_v}"', content, count=1
         )
-        if res.returncode != 0:
-            err = (res.stderr or res.stdout or "").strip()
-            raise RuntimeError(
-                f"bump-my-version failed (is it installed in environment?): {err}"
-            )
+        file_path.write_text(updated, encoding="utf-8")
+
+        # Also sync uv.lock if present
+        uv_lock = project_root / "uv.lock"
+        if uv_lock.exists():
+            try:
+                lock_text = uv_lock.read_text(encoding="utf-8")
+                # Update package version entry in uv.lock if matching current version
+                pattern = rf'(name\s*=\s*"{re.escape(project_root.name)}"\nversion\s*=\s*)"{re.escape(info.version)}"'
+                if re.search(pattern, lock_text):
+                    lock_updated = re.sub(pattern, f'\\1"{new_v}"', lock_text, count=1)
+                    uv_lock.write_text(lock_updated, encoding="utf-8")
+            except Exception:
+                pass
+
     elif source == "package.json":
-        res = subprocess.run(
-            ["npm", "version", part, "--no-git-tag-version"],
-            capture_output=True,
-            text=True,
-            cwd=project_root,
-            shell=(os.name == "nt"),
+        file_path = project_root / "package.json"
+        content = file_path.read_text(encoding="utf-8")
+        updated = re.sub(
+            r'("version"\s*:\s*)"(.*?)"', f'\\1"{new_v}"', content, count=1
         )
-        if res.returncode != 0:
-            err = (res.stderr or res.stdout or "").strip()
-            raise RuntimeError(f"npm version failed: {err}")
+        file_path.write_text(updated, encoding="utf-8")
+
+    elif source == "Cargo.toml":
+        file_path = project_root / "Cargo.toml"
+        content = file_path.read_text(encoding="utf-8")
+        updated = re.sub(
+            r'^(version\s*=\s*)"(.*?)"',
+            f'\\1"{new_v}"',
+            content,
+            count=1,
+            flags=re.MULTILINE,
+        )
+        file_path.write_text(updated, encoding="utf-8")
+
+    elif source.endswith(".csproj"):
+        file_path = project_root / source
+        content = file_path.read_text(encoding="utf-8")
+        updated = re.sub(
+            r"(<Version>)(.*?)(</Version>)", f"\\1{new_v}\\3", content, count=1
+        )
+        file_path.write_text(updated, encoding="utf-8")
+
+    elif source == "pom.xml":
+        file_path = project_root / "pom.xml"
+        content = file_path.read_text(encoding="utf-8")
+        updated = re.sub(
+            r"(<version>)(.*?)(</version>)", f"\\1{new_v}\\3", content, count=1
+        )
+        file_path.write_text(updated, encoding="utf-8")
+
+    elif "gradle" in source:
+        file_path = project_root / source
+        content = file_path.read_text(encoding="utf-8")
+        updated = re.sub(
+            r'(version\s*=\s*["\'])(.*?)(["\'])', f"\\1{new_v}\\3", content, count=1
+        )
+        file_path.write_text(updated, encoding="utf-8")
+
     else:
         raise RuntimeError(
             f"Cannot bump version: unsupported project file source {source!r}"
         )
 
-    new_info = get_project_version(project_root)
-    if new_info.version == "unknown":
-        raise RuntimeError("Version bump ran but new version could not be read.")
-    return new_info.version
+    verify_info = get_project_version(project_root)
+    if verify_info.version != new_v:
+        raise RuntimeError(
+            f"Version bump failed: expected {new_v}, got {verify_info.version}"
+        )
+    return new_v
 
 
 def _commit_version_bump(
