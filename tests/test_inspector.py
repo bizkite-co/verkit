@@ -1,6 +1,4 @@
-import pytest
-from pathlib import Path
-from verkit.inspector import inspect_project, inspect_committed
+from verkit.inspector import inspect_project
 
 def test_inspect_python_project(tmp_path):
     pyproject = tmp_path / "pyproject.toml"

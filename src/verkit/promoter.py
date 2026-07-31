@@ -36,7 +36,6 @@ def _can_amend_version_safely(git_root: Path) -> Tuple[bool, str]:
     res = _git("rev-parse", "HEAD", cwd=git_root)
     if res.returncode != 0 or not res.stdout.strip():
         return False, "no HEAD commit"
-    head = res.stdout.strip()
 
     tags_res = _git(
         "tag", "--points-at", "HEAD", "--format=%(refname:short)", cwd=git_root
