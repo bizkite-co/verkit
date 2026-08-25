@@ -3,7 +3,7 @@ import sys
 
 from rich.console import Console
 
-from verkit.inspector import inspect_committed, inspect_project
+from verkit.inspector import display_version_info
 from verkit.promoter import promote_version
 from verkit.tagger import release_version, tag_version
 
@@ -51,10 +51,7 @@ def main():
     console = Console()
 
     if not args.command or args.command == "inspect":
-        info = inspect_project()
-        committed = inspect_committed()
-        console.print(f"[bold blue]Working version:[/bold blue] {info.version} (from {info.source or 'unknown'})")
-        console.print(f"[dim]Committed version (HEAD):[/dim] {committed.version}")
+        display_version_info(console, "verkit")
         return
 
     try:

@@ -1,10 +1,62 @@
+import importlib.metadata
 import json
 import os
 import re
 import subprocess
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+
+from rich.console import Console
+
+
+def get_installed_version(package_name: str) -> str:
+    """Read the installed package version via importlib.metadata."""
+    try:
+        return importlib.metadata.version(package_name)
+    except Exception:
+        return "unknown"
+
+
+def get_latest_pypi_version(package_name: str, timeout: int = 4) -> Optional[str]:
+    """Fetch the latest version of a package from PyPI."""
+    url = f"https://pypi.org/pypi/{package_name}/json"
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            data = json.load(response)
+            return data["info"]["version"]
+    except Exception:
+        return None
+
+
+def display_version_info(
+    console: Console,
+    package_name: str,
+    root: Optional[Path] = None,
+    upgrade_cmd: Optional[str] = None,
+):
+    """Display running, PyPI, and local project version information."""
+    tool_v = get_installed_version(package_name)
+    console.print(f"[bold blue]Running version:[/bold blue] {tool_v}")
+
+    latest_v = get_latest_pypi_version(package_name)
+    if latest_v:
+        if latest_v != tool_v:
+            console.print(f"[bold yellow]Latest PyPI version:[/bold yellow] {latest_v}")
+            if upgrade_cmd:
+                console.print(f"[dim]Run [bold]{upgrade_cmd}[/bold] to upgrade.[/dim]")
+        else:
+            console.print(f"[dim]Latest PyPI version:[/dim] {latest_v} (up to date)")
+
+    try:
+        info = get_project_version(root)
+        if info.version != "unknown":
+            console.print(
+                f"[dim]Local project version:[/dim] {info.version} (from {info.source})"
+            )
+    except Exception:
+        pass
 
 
 @dataclass

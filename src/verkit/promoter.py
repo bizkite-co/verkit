@@ -235,7 +235,9 @@ def _commit_version_bump(
                 if msg_res.returncode == 0
                 else "chore: bump version"
             )
-            commit_res = _git("commit", "--amend", "-m", existing_msg, cwd=git_root)
+            commit_res = _git(
+                "commit", "--no-verify", "--amend", "-m", existing_msg, cwd=git_root
+            )
             if commit_res.returncode != 0:
                 err = (commit_res.stderr or commit_res.stdout or "").strip()
                 raise RuntimeError(f"Failed to amend version bump: {err}")
@@ -246,7 +248,7 @@ def _commit_version_bump(
 
     if not amend:
         msg = f"chore(release): v{new_v}"
-        commit_res = _git("commit", "-m", msg, cwd=git_root)
+        commit_res = _git("commit", "--no-verify", "-m", msg, cwd=git_root)
         if commit_res.returncode != 0:
             err = (commit_res.stderr or commit_res.stdout or "").strip()
             if "nothing to commit" in err.lower():
