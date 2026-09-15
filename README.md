@@ -76,3 +76,39 @@ tag_name = verkit.tag_version(push=True)
 # 4. Atomic release
 verkit.release_version("patch", push=True)
 ```
+
+---
+
+## Shared Terminal Theme
+
+`verkit` publishes the canonical Rich theme used across this developer's
+CLIs (`task-agent`, `multi-agent-registry`, ...). It is **opt-in** — verkit
+never applies the theme for you; consumers import it and apply it to their
+own `Table`/`Panel` objects:
+
+```python
+from rich.console import Console
+from rich.table import Table
+from verkit.theme import DEFAULT as theme
+
+console = Console()
+table = Table(
+    title="Portfolio",
+    box=theme.table_box,          # borderless
+    header_style=theme.header_style,  # "on grey23"
+    padding=theme.table_padding,  # (0, 2, 0, 0)
+)
+console.print(table)
+```
+
+The theme is a frozen dataclass (`verkit.theme.Theme`); `DEFAULT` is the
+canonical instance. Non-Python consumers (e.g. PowerShell scripts) read the
+machine-readable mirror, which stays in sync via `tests/test_theme.py`:
+
+```powershell
+$theme = Invoke-RestMethod `
+  https://raw.githubusercontent.com/bizkite-co/verkit/main/src/verkit/theme.json
+# $theme.theme.header_style               -> "on grey23"
+# $theme.theme.header_background_ansi     -> ANSI 256 index 237 background escape
+# $theme.theme.header_background_rgb_hex  -> "#3a3a3a"
+```

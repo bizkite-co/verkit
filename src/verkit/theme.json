@@ -1,0 +1,18 @@
+{
+  "name": "verkit-grey",
+  "version": 1,
+  "description": "Shared Rich terminal theme for tables and panels across this developer's Python CLIs (task-agent, multi-agent-registry, ...). Source of truth is src/verkit/theme.py (the Theme dataclass); this JSON mirrors Theme.DEFAULT for non-Python consumers and is kept in sync by tests/test_theme.py.",
+  "adoption": {
+    "python": "from verkit.theme import DEFAULT as theme",
+    "powershell": "$theme = Invoke-RestMethod '<raw URL of this file>'; $theme.theme",
+    "note": "Opt-in only: verkit publishes the theme but never applies it for you."
+  },
+  "theme": {
+    "table_box": null,
+    "panel_box": "MINIMAL",
+    "table_padding": [0, 2, 0, 0],
+    "header_style": "on grey23",
+    "header_background_ansi": "\u001b[48;5;237m",
+    "header_background_rgb_hex": "#3a3a3a"
+  }
+}
